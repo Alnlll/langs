@@ -145,7 +145,7 @@ fn main() {
 - Tuples
 - Arrays
 
-### 2.2.2.1. Tuples
+#### 2.2.2.1. Tuples
 A tuple is a general way of grouping together **a number of values with a variety of types** into one compound type.
 
 Tuples have a fixed length: once declared, they cannot grow or shrink in size.
@@ -155,11 +155,95 @@ Tuples have a fixed length: once declared, they cannot grow or shrink in size.
   println!("name: {}, age: {}, salary: {}", tup.0, tup.1, tup.2);
 ```
 
-### 2.2.2.2. Arrays
+#### 2.2.2.2. Arrays
 
 - Unlike a tuple, every element of an array **must have the same type**.
 - Arrays in Rust are different from arrays in some other languages because arrays in Rust **have a fixed length**, like tuples.
 
 ```rust
-
+  let a = [1, 2, 3, 4, 5];
+//   let first = a[0];
+//   let second = a[1];
+  println!("a[0] = {}", a[0]);
 ```
+
+### 2.2.3. Functions
+```rust
+fn plus_one(x: i32) -> i32 {
+  x + 1
+}
+
+fn main() {
+  let x = 1;
+  println!("{}", plus_one(x));
+}
+```
+
+### 2.2.4. Comments
+
+### 2.2.4. Control Flow
+
+#### 2.2.4.1. if
+
+- if-else
+```rust
+  if 10 < number {
+    println!("number {} > 10", number);
+  } else {
+    println!("number {} <= 10", number);
+  }
+```
+
+- else if
+```rust
+  if 10 < number {
+    println!("number {} > 10", number);
+  } else if 10 == number {
+    println!("number {} = 10", number);
+  } else {
+    println!("number {} < 10", number);
+  }
+```
+
+- `if` in a let statement
+```rust
+  let condition = true;
+  let x = if condition {5} else {10};
+  println!("x = {}", x);
+```
+
+#### 2.2.4.2. Loops
+
+- loop
+```rust
+  loop {
+    println!("Again!")
+  }
+```
+- while
+```rust
+  let mut i = 10;
+  while 0 != i {
+    i -= 1;
+    println!("i = {}", i);
+  }
+  println!("Loop FINISHED.");
+```
+
+- for
+```rust
+  // container iter for
+  let a = [10, 20, 30, 40, 50, 60, 70, 80];
+  for elem in a.iter() {
+    println!("val is {}.", elem);
+  }
+
+  // range for loop
+  for i in {1..4}.rev() {
+    println!("i = {}", i);
+  }
+```
+
+# 3. OwnerShip
+
+
