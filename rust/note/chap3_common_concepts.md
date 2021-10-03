@@ -243,7 +243,3 @@ fn main() {
     println!("i = {}", i);
   }
 ```
-
-# 3. OwnerShip
-
-
