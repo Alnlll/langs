@@ -1,0 +1,8 @@
+# Get Started on Rust
+
+## Package Management with Cargo
+
+- `cargo search`
+Once found a crate , add it to `Cargo.toml`, in the `[dependencies]` section, add a line for the dependency and version.
+```
+```
