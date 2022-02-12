@@ -174,4 +174,164 @@ y = idx / SCREEN_WIDTH;
 ```
 
 ### Consume the Map API
+```rust
+impl GameState for State {
+  fn tick(&mut self, ctx: &mut BTerm) {
+    ctx.cls();
+    self.map.render(ctx);
+  }
+}
 
+fn main() -> BError {
+  let context = BTermBuilder::simple80x50()
+    .with_title("Dungeon Crawler")
+    .with_fps_cap(30.0)
+    .build()?;
+  
+  main_loop(context, State::new())
+}
+```
+
+## Adding the Adventurer
+The adventurer is the player's avatar in the dungeon.
+
+### Extend the Map API
+Determining if an x/y coordinate pair is within the bounds of the map.
+```rust
+  // reference will not take over ownership
+  // The sample is using moving, not sure whether is a clone.
+  pub fn in_bounds(&self, point: &Point) -> bool {
+    point.x >= 0 && point.x < SCREEN_WIDTH &&
+    point.y >= 0 && point.y < SCREEN_HEIGHT
+  }
+```
+
+Determining if the player can enter a tile.
+```rust
+  pub fn can_enter_tile(&self, point: &Point) -> bool {
+    self.in_bounds(point) &&
+    self.tiles[map_idx(point.x, point.y)] == TileType::Floor
+  }
+```
+
+It would be useful to have a means of determining a tile’s index coordinates, and indicate an error condition if the requested coordinates fall outside of the map boundaries.
+```rust
+  // Option
+  // enum Option<T> {
+  //   None,
+  //   Some(T),
+  //  }
+  // To represent none concept
+  pub fn try_idx(&self, point: &Point) -> Option<usize> {
+    if !self.in_bounds(point) {
+      None
+    } else {
+      Some(map_idx(point.x, point.y))
+    }
+  }
+```
+
+### Create the Player Structure
+
+Create a new `player.rs`, add it into crate prelude.
+```rust
+mod map;
+mod player;
+
+mod prelude {
+  pub use bracket_lib::prelude::*;
+  pub const SCREEN_WIDTH: i32 = 80;
+  pub const SCREEN_HEIGHT: i32 = 50;
+  pub use crate::map::*;
+  pub use crate::player::*;
+}
+```
+
+Defining the structure of the Player.
+```rust
+// pub to be available
+pub struct Player {
+  // pub to be available
+  pub position: Point,
+}
+
+impl Player {
+  pub fn new(position: Point) -> Self {
+    Self {
+      position
+    }
+  }
+}
+```
+
+### Render the Player
+```rust
+  pub fn render(&self, ctx: &mut BTerm) {
+    ctx.set(
+      self.position.x,
+      self.position.y,
+      WHITE,
+      BLACK,
+      to_cp437('@'),
+    );
+  }
+```
+
+### Move the Player
+```rust
+  pub fn update(&mut self, ctx: &mut BTerm, map: &Map) {
+    // The below match could be awkward like this, "if let" make it clearer
+    // let x = Some(7)
+    // match x {
+    // }
+    // The `if let` construct reads: "if `let` destructures `key` into `Some(i)`, evaluate the block (`{}`)"
+    if let Some(key) = ctx.key {
+      let delta = match key {
+        VirtualKeyCode::Left => Point::new(-1, 0),
+        VirtualKeyCode::Right => Point::new(1, 0),
+        VirtualKeyCode::Up => Point::new(0, -1),
+        VirtualKeyCode::Down => Point::new(0, 1),
+        _ => Point::zero(),
+      };
+
+      let new_position = self.position + delta;
+      if map.can_enter_tile(&new_position) {
+        self.position = new_position;
+      }
+    }
+```
+
+### Consume the Player API
+```rust
+struct State {
+  map: Map,
+  player: Player,
+}
+
+impl State {
+  fn new() -> Self {
+    Self { 
+      map: Map::new(),
+      player: Player::new(Point::new(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)),
+    }
+  }
+}
+
+impl GameState for State {
+  fn tick(&mut self, ctx: &mut BTerm) {
+    ctx.cls();
+    self.player.update(ctx, &self.map);
+    self.map.render(ctx);
+    self.player.render(ctx);
+  }
+}
+
+fn main() -> BError {
+  let context = BTermBuilder::simple80x50()
+    .with_title("Dungeon Crawler")
+    .with_fps_cap(30.0)
+    .build()?;
+  
+  main_loop(context, State::new())
+}
+```
