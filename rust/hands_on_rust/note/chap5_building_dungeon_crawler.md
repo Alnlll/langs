@@ -337,3 +337,127 @@ fn main() -> BError {
 ```
 
 # Building a Dungeon
+# Graphics, Camera, Action
+## Programmer Art for the Dungeon
+`bracket-lib` renders terminals by copying glyphs from a font file onto the terminal window, users could assign a symbol to a tile type and replacing that character in the font file with chosen programmer art.
+
+Here use the `resources/dungeonfont.png`:
+<img src="../code/chap5/dungeoncrawl/resources/dungeonfont.png">
+
+## Graphics Layers
+You can get much better results by using `layers`. The map is rendered to a base layer, and the player to the layer on top of it—with transparency, so the floor remains visible. 
+```rust
+let context = BTermBuilder::new()
+    .with_title("Dungeon Crawler")
+    .with_fps_cap(30.0)
+    // The size of subsequent consoles you add
+    .with_dimensions(DISPLAY_WIDTH, DISPLAY_HEIGHT)
+    // The size of each character in the fond file
+    .with_tile_dimensions(32, 32)
+    // The root path of font file
+    .with_resource_path("resources/")
+    // the font file and the character dimensions
+    .with_font("dungeonfont.png", 32 ,32)
+    // Add a console using the dimensions and the named tile graphics file
+    .with_simple_console(DISPLAY_WIDTH, DISPLAY_HEIGHT, "dungeonfont.png")
+    // Add a second console with no background so transparency shows through it.
+    .with_simple_console_no_bg(DISPLAY_WIDTH, DISPLAY_HEIGHT, "dungeonfont.png")
+    .build()?;
+```
+
+## Make a Camera
+```rust
+// Camera Struct
+pub struct Camera {
+  pub left_x: i32,
+  pub right_x: i32,
+  pub top_y: i32,
+  pub bottom_y: i32,
+}
+```
+
+We need a construction function and the camera needs to follow the player's location after the player moved.
+```rust
+impl Camera {
+  pub fn new(player_point: Point) -> Self {
+    Self {
+      // center is the player
+      left_x: player_point.x - DISPLAY_WIDTH/2,
+      right_x: player_point.x + DISPLAY_WIDTH/2,
+      top_y: player_point.y - DISPLAY_HEIGHT/2,
+      bottom_y: player_point.y + DISPLAY_HEIGHT/2
+    }
+  }
+
+  pub fn on_player_move(&mut self, player_point: Point) {
+    self.left_x = player_point.x - DISPLAY_WIDTH/2;
+    self.right_x = player_point.x + DISPLAY_WIDTH/2;
+    self.top_y = player_point.y - DISPLAY_HEIGHT/2;
+    self.bottom_y = player_point.y + DISPLAY_HEIGHT/2;
+  }
+}
+```
+
+The map should be rendered with the camera window range, update the `render` of map as:
+```rust
+  pub fn render(&self, ctx: &mut BTerm, camera: &Camera) {
+    // activate map layer
+    ctx.set_active_console(0);
+
+    for y in camera.top_y..camera.bottom_y {
+      for x in camera.left_x..camera.right_x {
+        if self.in_bounds(&Point::new(x, y)) {
+          let idx = map_idx(x, y);
+          match self.tiles[idx] {
+            TileType::Floor => {
+              ctx.set(x-camera.left_x, y-camera.top_y, WHITE, BLACK, to_cp437('.'));
+            }
+            TileType::Wall => {
+              ctx.set(x-camera.left_x, y-camera.top_y, WHITE, BLACK, to_cp437('#'));
+            }
+          }
+        }
+      }
+    }
+  }
+```
+
+Also we need to connect the player and the camera
+```rust
+// update function, update camera when the position changes
+      let new_position = self.position + delta;
+      if map.can_enter_tile(&new_position) {
+        self.position = new_position;
+        camera.on_player_move(new_position);
+      }
+```
+
+Rendering the player on player layer according to the camera location.
+```rust
+  pub fn render(&self, ctx: &mut BTerm, camera: &Camera) {
+    ctx.set_active_console(1);
+    ctx.set(
+      self.position.x - camera.left_x,
+      self.position.y - camera.top_y,
+      WHITE,
+      BLACK,
+      to_cp437('@'),
+    );
+  }
+```
+
+In main loop, we need to clear all layers and update functions
+```rust
+// main.rs
+impl GameState for State {
+  fn tick(&mut self, ctx: &mut BTerm) {
+    ctx.set_active_console(0);
+    ctx.cls();
+    ctx.set_active_console(1);
+    ctx.cls();
+    self.player.update(ctx, &self.map, &mut self.camera);
+    self.map.render(ctx, &self.camera);
+    self.player.render(ctx, &self.camera);
+  }
+}
+```
