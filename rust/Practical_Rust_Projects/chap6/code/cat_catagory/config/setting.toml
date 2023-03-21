@@ -1,0 +1,7 @@
+centroids = [
+  22.5, 40.5,
+  38.0, 50.0,
+  25.5, 48.0
+]
+nosie = 1.8
+sample_per_center = 2000
