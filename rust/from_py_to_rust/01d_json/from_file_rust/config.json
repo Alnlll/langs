@@ -1,0 +1,79 @@
+{
+  "inv3_demo": {
+    "root_dir": "model/inv3",
+    "model_name": "inception_v3_2016_08_28_frozen.pb",
+    "input_nodes": {
+      "input": [1, 299, 299, 3],
+      "input1": [1, 299, 299, 3]
+    },
+    "output_nodes": [
+      [
+        "InceptionV3/Predictions/Softmax"
+      ]
+    ],
+    "cmp_output_nodes": [
+      [
+        "InceptionV3/Predictions/Softmax"
+      ]
+    ],
+    "quant": true,
+    "quant_override": "",
+    "input_list": "input_data/raw_list.txt",
+    "golden_list": "",
+    "weigth_bw": 8,
+    "act_bw": 8,
+    "bias_bw": 32,
+    "per_channel": false,
+    "post_quant": false,
+    "algorithms": "",
+    "param_quantizer": "tf",
+    "act_quantizer": "tf",
+    "cache_builder": "host",
+    "debug": false,
+    "convert_debug": false,
+    "runtime": "htp",
+    "runner": "device",
+    "perf_level": "burst",
+    "output_data_type": "",
+    "shared_buffer": false,
+    "skip": false
+  },
+  "inv3_demo_3": {
+    "root_dir": "model/inv3",
+    "model_name": "inception_v3_2016_08_28_frozen.pb",
+    "input_nodes": {
+      "input": [1, 299, 299, 3]
+    },
+    "output_nodes": [
+      [
+        "InceptionV3/Predictions/Softmax"
+      ]
+    ],
+    "cmp_output_nodes": [
+      [
+        "InceptionV3/Predictions/Softmax"
+      ]
+    ],
+    "quant": true,
+    "quant_override": "",
+    "input_list": "input_data/raw_list.txt",
+    "golden_list": "",
+    "weigth_bw": 8,
+    "act_bw": 8,
+    "bias_bw": 32,
+    "per_channel": false,
+    "post_quant": false,
+    "algorithms": "",
+    "param_quantizer": "tf",
+    "act_quantizer": "tf",
+    "cache_builder": "host",
+    "debug": false,
+    "convert_debug": false,
+    "runtime": "htp",
+    "runner": "device",
+    "perf_level": "burst",
+    "output_data_type": "",
+    "shared_buffer": false,
+    "skip": false
+  }
+}
