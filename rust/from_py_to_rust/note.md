@@ -52,3 +52,12 @@ cargo doc
 cargo test
 ```
 
+- vscode
+```
+# Ctrl + Shift + p
+# setting
+# "rust-analyzer.linkedProjects": [
+#        "path-to/listish/Cargo.toml"
+#    ],
+```
+
