@@ -5,6 +5,7 @@ def do_someting(x):
     return y + 1
   return do_something_else(x)
 
+<<<<<<< HEAD
 def fizz_buzz(a: int):
   if 0 == a % 15:
     print("FizzBuzz")
@@ -15,6 +16,8 @@ def fizz_buzz(a: int):
   else:
     print(a)
 
+=======
+>>>>>>> 10abfd90606aada10ecfd33c323db5067f23a01c
 if __name__ == "__main__":
   print(do_someting(1))
 
@@ -31,8 +34,12 @@ if __name__ == "__main__":
   added_one = list(map(plus_one, items))
   added_one_sum = reduce(lambda x, y : x + y, added_one)
 
+<<<<<<< HEAD
   print(added_one, added_one_sum)
 
   # no possible for lambda
   for i in range(16):
     fizz_buzz(i)
+=======
+  print(added_one, added_one_sum)
+>>>>>>> 10abfd90606aada10ecfd33c323db5067f23a01c

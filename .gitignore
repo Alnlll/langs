@@ -13,3 +13,7 @@ Cargo.lock
 
 # python
 *.pyc
+.ipynb_checkpoints/
+
+# specs
+Miniconda3-latest-Linux-x86_64.sh

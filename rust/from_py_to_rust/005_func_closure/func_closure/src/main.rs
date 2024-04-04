@@ -24,6 +24,7 @@ fn main() {
   let added_one = items.iter().map(plus_one).collect::<Vec<_>>();
   let added_one_sum = added_one.iter().fold(0, |x, y| x + y);
   println!("{:?} sum: {:?}", added_one, added_one_sum);
+<<<<<<< HEAD
 
   let fizz_buzz = |x| {
     if x % 15 == 0 {
@@ -42,4 +43,6 @@ fn main() {
   }
   println!("---------------");
   (1..16).into_iter().for_each(fizz_buzz);
+=======
+>>>>>>> 10abfd90606aada10ecfd33c323db5067f23a01c
 }
