@@ -609,3 +609,164 @@ fn takes_and_gives_back(a_string: String) -> String { // a_string 进入作用�
     a_string  // 返回 a_string 并移出给调用的函数
 }
 ```
+
+## 2.3.2 引用与借用
+常规引用是一个指针类型，指向了对象存储的内存地址。
+```rust
+fn main() {
+    let x = 5;
+    let y = &x;  // y 是 x 的引用
+
+    assert_eq!(5, x);
+    assert_eq!(5, *y); // 使用解引用运算符 * 来获取引用指向的值
+}
+```
+
+### 不可变引用
+
+下面的代码，我们用 s1 的引用作为参数传递给 calculate_length 函数，而不是把 s1 的所有权转移给该函数：
+- 无需像上章一样：先通过函数参数传入所有权，然后再通过函数返回来传出所有权，代码更加简洁
+- `calculate_length` 的参数 s 类型从 String 变为 &String
+
+```rust
+fn main() {
+    let s1 = String::from("hello");
+
+    let len = calculate_length(&s1);
+
+    println!("The length of '{}' is {}.", s1, len);
+}
+
+fn calculate_length(s: &String) -> usize {
+    s.len()
+}
+```
+
+<img src="https://pic1.zhimg.com/80/v2-fc68ea4a1fe2e3fe4c5bb523a0a8247c_1440w.jpg">
+
+通过 &s1 语法，我们创建了一个指向 s1 的引用，但是并不拥有它。因为并不拥有这个值，当引用离开作用域后，其指向的值也不会被丢弃
+但是如果我们想要修改变量的值呢？正如变量默认不可变一样，引用指向的值默认也是不可变的.
+```rust
+fn main() {
+    let s = String::from("hello");
+
+    change(&s);
+}
+
+fn change(some_string: &String) {
+    some_string.push_str(", world");
+}
+
+error[E0596]: cannot borrow `*some_string` as mutable, as it is behind a `&` reference
+ --> src/main.rs:8:5
+  |
+7 | fn change(some_string: &String) {
+  |                        ------- help: consider changing this to be a mutable reference: `&mut String`
+                           ------- 帮助：考虑将该参数类型修改为可变的引用: `&mut String`
+8 |     some_string.push_str(", world");
+  |     ^^^^^^^^^^^ `some_string` is a `&` reference, so the data it refers to cannot be borrowed as mutable
+                     `some_string`是一个`&`类型的引用，因此它指向的数据无法进行修改
+
+```
+
+### 可变引用
+```rust
+fn main() {
+    let mut s = String::from("hello");
+
+    change(&mut s);
+}
+
+fn change(some_string: &mut String) {
+    some_string.push_str(", world");
+}
+```
+
+声明 s 是可变类型，其次创建一个可变的引用 &mut s 和接受可变引用参数 some_string: &mut String 的函数。
+
+#### 可变引用同时只能存在一个
+
+同一作用域，特定数据只能有一个可变引用：
+```rust
+let mut s = String::from("hello");
+
+let r1 = &mut s;
+let r2 = &mut s;
+
+println!("{}, {}", r1, r2);
+
+error[E0499]: cannot borrow `s` as mutable more than once at a time 同一时间无法对 `s` 进行两次可变借用
+ --> src/main.rs:5:14
+  |
+4 |     let r1 = &mut s;
+  |              ------ first mutable borrow occurs here 首个可变引用在这里借用
+5 |     let r2 = &mut s;
+  |              ^^^^^^ second mutable borrow occurs here 第二个可变引用在这里借用
+6 |
+7 |     println!("{}, {}", r1, r2);
+  |                        -- first borrow later used here 第一个借用在这里使用
+```
+
+这种限制的好处就是使 Rust 在编译期就避免数据竞争，数据竞争可由以下行为造成：
+- 两个或更多的指针同时访问同一数据
+- 至少有一个指针被用来写入数据
+- 没有同步数据访问的机制
+
+#### 可变引用与不可变引用不能同时存在
+
+```rust
+let mut s = String::from("hello");
+
+let r1 = &s; // 没问题
+let r2 = &s; // 没问题
+let r3 = &mut s; // 大问题
+
+println!("{}, {}, and {}", r1, r2, r3);
+
+error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable
+        // 无法借用可变 `s` 因为它已经被借用了不可变
+ --> src/main.rs:6:14
+  |
+4 |     let r1 = &s; // 没问题
+  |              -- immutable borrow occurs here 不可变借用发生在这里
+5 |     let r2 = &s; // 没问题
+6 |     let r3 = &mut s; // 大问题
+  |              ^^^^^^ mutable borrow occurs here 可变借用发生在这里
+7 |
+8 |     println!("{}, {}, and {}", r1, r2, r3);
+  |                                -- immutable borrow later used here 不可变借用在这里使用
+```
+
+其实这个也很好理解，正在借用不可变引用的用户，肯定不希望他借用的东西，被另外一个人莫名其妙改变了。多个不可变借用被允许是因为没有人会去试图修改数据，每个人都只读这一份数据而不做修改，因此不用担心数据被污染。
+
+Rust 的编译器一直在优化，早期的时候，引用的作用域跟变量作用域是一致的，这对日常使用带来了很大的困扰，你必须非常小心的去安排可变、不可变变量的借用，免得无法通过编译，例如以下代码：
+```rust
+fn main() {
+   let mut s = String::from("hello");
+
+    let r1 = &s;
+    let r2 = &s;
+    println!("{} and {}", r1, r2);
+    // 新编译器中，r1,r2作用域在这里结束
+
+    let r3 = &mut s;
+    println!("{}", r3);
+} // 老编译器中，r1、r2、r3作用域在这里结束
+  // 新编译器中，r3作用域在这里结束
+```
+**新版编译器中引用作用域的结束位置从花括号变成最后一次使用的位置**
+
+### NLL
+对于这种编译器优化行为，Rust 专门起了一个名字 —— Non-Lexical Lifetimes(NLL)，专门用于找到某个引用在作用域(})结束前就不再被使用的代码位置。
+
+虽然这种借用错误有的时候会让我们很郁闷，但是你只要想想这是 Rust 提前帮你发现了潜在的 BUG，其实就开心了，虽然减慢了开发速度，但是从长期来看，大幅减少了后续开发和运维成本。
+
+### 悬垂引用(Dangling References)
+悬垂引用也叫做悬垂指针，意思为指针指向某个值后，这个值被释放掉了，而指针仍然存在，其指向的内存可能不存在任何值或已被其它变量重新使用。在 Rust 中编译器可以确保引用永远也不会变成悬垂状态：当你获取数据的引用后，编译器可以确保数据不会在引用结束前被释放，要想释放数据，必须先停止其引用的使用。
+
+
+### 借用规则总结
+总的来说，借用规则如下：
+- 引用不会导致ownership发生变化，也就是不会发生move。
+- 同一时刻，你只能拥有要么一个可变引用，要么任意多个不可变引用
+- 引用必须总是有效的
