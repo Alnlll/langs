@@ -770,3 +770,315 @@ fn main() {
 - 引用不会导致ownership发生变化，也就是不会发生move。
 - 同一时刻，你只能拥有要么一个可变引用，要么任意多个不可变引用
 - 引用必须总是有效的
+
+[practice](https://practice-zh.course.rs/ownership/borrowing.html) 
+
+
+# 2.4 符合类型
+## 2.4.1 字符串和切片
+```rust
+fn main() {
+  let my_name = "Pascal";
+  greet(my_name);
+}
+
+fn greet(name: String) {
+  println!("Hello, {}!", name);
+}
+
+-------------------------
+error[E0308]: mismatched types
+ --> src/main.rs:3:11
+  |
+3 |     greet(my_name);
+  |           ^^^^^^^
+  |           |
+  |           expected struct `std::string::String`, found `&str`
+  |           help: try using a conversion method: `my_name.to_string()`
+
+error: aborting due to previous error
+```
+
+### 切片(slice)
+
+```rust
+let s = String::from("hello world");
+
+let hello = &s[0..5];
+let world = &s[6..11];
+```
+切片并不是 Rust 独有的概念，在 Go 语言中就非常流行，它允许你引用集合中部分连续的元素序列，而不是引用整个集合。
+
+`hello` 没有引用整个 `String s`，而是引用了 s 的一部分内容，通过 [0..5] 的方式来指定。
+`let world = &s[6..11];` 来说，world 是一个切片，该切片的指针指向 s 的第 7 个字节(索引从 0 开始, 6 是第 7 个字节)，且该切片的长度是 5 个字节
+
+<img src="https://pic1.zhimg.com/80/v2-69da917741b2c610732d8526a9cc86f5_1440w.jpg">
+
+```rust
+let s = String::from("hello");
+let len = s.len();
+
+let slice = &s[0..2];
+let slice = &s[..2];
+
+let slice = &s[4..len];
+let slice = &s[4..];
+
+let slice = &s[0..len];
+let slice = &s[..];
+```
+
+在对字符串使用切片语法时需要格外小心，切片的索引必须落在字符之间的边界位置，也就是 UTF-8 字符的边界，例如中文在 UTF-8 中占用三个字节，下面的代码就会崩溃：
+```rust
+ let s = "中国人";
+ let a = &s[0..2];
+ println!("{}",a);
+```
+因为我们只取 s 字符串的前两个字节，但是本例中每个汉字占用三个字节，因此没有落在边界处，也就是连 中 字都取不完整，此时程序会直接崩溃退出，如果改成 &s[0..3]，则可以正常通过编译。 因此，当你需要对字符串做切片索引操作时，需要格外小心这一点，关于该如何操作 UTF-8 字符串，参见这里。
+
+**字符串切片的类型标识是 `&str`，因此我们可以这样声明一个函数，输入 String 类型，返回它的切片：`fn first_word(s: &String) -> &str `。**
+
+```rust
+fn main() {
+    let mut s = String::from("hello world");
+
+    let word = first_word(&s);
+
+    s.clear(); // error!
+
+    println!("the first word is: {}", word);
+}
+fn first_word(s: &String) -> &str {
+    &s[..1]
+}
+
+==================
+error[E0502]: cannot borrow `s` as mutable because it is also borrowed as immutable
+  --> src/main.rs:18:5
+   |
+16 |     let word = first_word(&s);
+   |                           -- immutable borrow occurs here
+17 |
+18 |     s.clear(); // error!
+   |     ^^^^^^^^^ mutable borrow occurs here
+19 |
+20 |     println!("the first word is: {}", word);
+   |                                       ---- immutable borrow later used here
+```
+****
+### 字符串字面量是切片
+```rust
+let s: &str = "Hello, world!";
+```
+
+### 什么是字符串?
+**Rust 中的字符是 Unicode 类型，因此每个字符占据 4 个字节内存空间，但是在字符串中不一样，字符串是 UTF-8 编码，也就是字符串中的字符所占的字节数是变化的(1 - 4)**
+
+Rust 在语言级别，只有一种字符串类型： `str`.
+
+- 通常是以引用类型出现 `&str`
+- 在标准库里，还有多种不同用途的字符串类型，其中使用最广的即是 `String`类型
+
+### String 与 &str 的转换
+
+- &str 到 String
+```rust
+String::from("hello,world")
+"hello,world".to_string()
+```
+
+- String 到 &str
+```rust
+fn main() {
+    let s = String::from("hello,world!");
+    say_hello(&s);
+    say_hello(&s[..]);
+    say_hello(s.as_str());
+}
+
+fn say_hello(s: &str) {
+    println!("{}",s);
+}
+```
+
+### 字符串索引
+在其它语言中，使用索引的方式访问字符串的某个字符或者子串是很正常的行为，但是在 Rust 中就会报错：
+```rust
+   let s1 = String::from("hello");
+   let h = s1[0];
+==================
+3 |     let h = s1[0];
+  |             ^^^^^ `String` cannot be indexed by `{integer}`
+  |
+  = help: the trait `Index<{integer}>` is not implemented for `String`
+```
+
+#### 字符串内部 
+字符串的底层的数据存储格式实际上是[ u8 ]，一个字节数组, 由于是utf-8编码不同字符占用的长度是不一样的，所以我们不能简单通过索引来访问字符串中的某个字符。
+
+
+### 字符串切片
+前文提到过，字符串切片是非常危险的操作，因为切片的索引是通过字节来进行，但是字符串又是 UTF-8 编码，因此你无法保证索引的字节刚好落在字符的边界上，例如：
+```rust
+let hello = "中国人";
+
+let s = &hello[0..2];
+```
+
+### 操作字符串
+- 追加 (Push)
+  ```rust
+  fn main() {
+      let mut s = String::from("Hello ");
+
+      s.push_str("rust");
+      println!("追加字符串 push_str() -> {}", s);
+
+      s.push('!');
+      println!("追加字符 push() -> {}", s);
+  }
+  ```
+- 插入 (Insert) : 可以使用 insert() 方法插入单个字符 char，也可以使用 insert_str() 方法插入字符串字面量
+  ```rust
+  fn main() {
+    let mut s = String::from("Hello rust!");
+    s.insert(5, ',');
+    println!("插入字符 insert() -> {}", s);
+    s.insert_str(6, " I like");
+    println!("插入字符串 insert_str() -> {}", s);
+  }
+  ```
+- 替换 (Replace)
+  - replace
+    ```rust
+    fn main() {
+      let string_replace = String::from("I like rust. Learning rust is my favorite!");
+      let new_string_replace = string_replace.replace("rust", "RUST");
+      dbg!(new_string_replace);
+    }
+    ```
+  - replacen
+    ```rust
+    fn main() {
+      let string_replace = "I like rust. Learning rust is my favorite!";
+      let new_string_replacen = string_replace.replacen("rust", "RUST", 1);
+      dbg!(new_string_replacen);
+    }
+    ```
+  - replace_range : 仅适用于 String 类型
+    ```rust
+    fn main() {
+      let mut string_replace_range = String::from("I like rust!");
+      string_replace_range.replace_range(7..8, "R");
+      dbg!(string_replace_range);
+    }
+    ```
+- 删除 (Delete)
+  - pop —— 删除并返回字符串的最后一个字符
+  - remove —— 删除并返回字符串中指定位置的字符
+  - truncate —— 删除字符串中从指定位置开始到结尾的全部字符
+    ```rust
+    fn main() {
+        let mut string_truncate = String::from("测试truncate");
+        string_truncate.truncate(3);
+        dbg!(string_truncate);
+    }
+    ```
+  - clear —— 清空字符串
+    ```rust
+    fn main() {
+        let mut string_clear = String::from("string clear");
+        string_clear.clear();
+        dbg!(string_clear);
+    }
+    ```
+  - 连接 (Concatenate)
+    - 使用 + 或者 += 连接字符串 : 要求右边的参数必须为字符串的切片引用（Slice）类型
+      ```rust
+      fn main() {
+          let string_append = String::from("hello ");
+          let string_rust = String::from("rust");
+          // &string_rust会自动解引用为&str
+          let result = string_append + &string_rust;
+          let mut result = result + "!"; // `result + "!"` 中的 `result` 是不可变的
+          result += "!!!";
+
+          println!("连接字符串 + -> {}", result);
+      }
+      ```
+    - 使用 format! 连接字符串 : format! 这种方式适用于 String 和 &str
+      ```rust
+      fn main() {
+          let s1 = "hello";
+          let s2 = String::from("rust");
+          let s = format!("{} {}!", s1, s2);
+          println!("{}", s);
+      }
+      ```
+### 字符串转义
+我们可以通过转义的方式 \ 输出 ASCII 和 Unicode 字符。
+```rust
+fn main() {
+    // 通过 \ + 字符的十六进制表示，转义输出一个字符
+    let byte_escape = "I'm writing \x52\x75\x73\x74!";
+    println!("What are you doing\x3F (\\x3F means ?) {}", byte_escape);
+
+    // \u 可以输出一个 unicode 字符
+    let unicode_codepoint = "\u{211D}";
+    let character_name = "\"DOUBLE-STRUCK CAPITAL R\"";
+
+    println!(
+        "Unicode character {} (U+211D) is called {}",
+        unicode_codepoint, character_name
+    );
+
+    // 换行了也会保持之前的字符串格式
+    // 使用\忽略换行符
+    let long_string = "String literals
+                        can span multiple lines.
+                        The linebreak and indentation here ->\
+                        <- can be escaped too!";
+    println!("{}", long_string);
+}
+```
+在某些情况下，可能你会希望保持字符串的原样，不要转义：
+```rust
+fn main() {
+    println!("{}", "hello \\x52\\x75\\x73\\x74");
+    let raw_str = r"Escapes don't work here: \x3F \u{211D}";
+    println!("{}", raw_str);
+
+    // 如果字符串包含双引号，可以在开头和结尾加 #
+    let quotes = r#"And then I said: "There is no escape!""#;
+    println!("{}", quotes);
+
+    // 如果字符串中包含 # 号，可以在开头和结尾加多个 # 号，最多加255个，只需保证与字符串中连续 # 号的个数不超过开头和结尾的 # 号的个数即可
+    let longer_delimiter = r###"A string with "# in it. And even "##!"###;
+    println!("{}", longer_delimiter);
+}
+```
+
+### 操作 UTF-8 字符串
+```rust
+for c in "中国人".chars() {
+    println!("{}", c);
+}
+
+for b in "中国人".bytes() {
+    println!("{}", b);
+}
+```
+
+### 字符串深度剖析
+
+为啥 String 可变，而字符串字面值 str 却不可以？
+
+- &str : 我们在编译时就知道其内容，最终字面值文本被直接硬编码进可执行文件中，这使得字符串字面值快速且高效，这主要得益于字符串字面值的不可变性
+- String: 对于 String 类型，为了支持一个可变、可增长的文本片段，需要在堆上分配一块在编译时未知大小的内存来存放内容，这些都是在程序运行时完成的：
+  - 首先向操作系统请求内存来存放 String 对象
+  - 在使用完成后，将内存释放，归还给操作系统
+
+### Practice
+- [字符串](https://practice-zh.course.rs/compound-types/string.html)
+- [切片](https://practice-zh.course.rs/compound-types/slice.html)
+- [String](https://practice-zh.course.rs/collections/string.html)
