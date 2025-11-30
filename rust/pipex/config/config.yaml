@@ -1,0 +1,14 @@
+pipeline:
+  name: "model_deployment_pipeline"
+  steps:
+    - id: "step1_convert"
+      step_type: "tf_convert"
+      params:
+        model_path: "./models/resnet50.pb"
+        output_format: "onnx"
+    
+    # 假设你实现了 device_exec
+    # - id: "step2_exec"
+    #   step_type: "device_exec"
+    #   params:
+    #     device_id: 0
